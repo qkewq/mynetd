@@ -76,6 +76,7 @@ int get_strlen(char *conf, long conf_size, int current){
 			return len;
 		}
 		len++;
+		current++;
 	}
 
 	return len;
@@ -117,12 +118,12 @@ lex_token_t *lex(char *conf, long conf_size){
 			}
 		}
 
-		int str_len = get_strlen(conf, conf_size, current);
+		int str_len = get_strlen(conf, conf_size, i);
 		current = add_token(current, LEX_STRING, i, str_len);
 		if(!current){
 			return free_tokens(head);
 		}
-		i += str_len;
+		i += str_len - 1;
 	}
 
 	current = add_token_eof(current);
