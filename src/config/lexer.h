@@ -7,6 +7,10 @@ typedef enum lex_token_type_t{
 	LEX_STRING,
 	LEX_ASSIGNMENT,
 	LEX_LF,
+	LEX_TAGID,
+	LEX_OTAG,
+	LEX_CTAG,
+	LEX_ENDTAG,
 } lex_token_type_t;
 
 typedef struct lex_token_t{

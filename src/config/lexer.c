@@ -90,6 +90,7 @@ lex_token_t *lex(char *conf, long conf_size){
 	lex_token_t *current = head;
 	current->type = LEX_START;
 
+	int in_tag = 0;
 	for(int i = 0; i < conf_size; i++){
 		if(is_whitespace(conf[i])){
 			continue;
@@ -108,6 +109,30 @@ lex_token_t *lex(char *conf, long conf_size){
 			if(!current){
 				return free_tokens(head);
 			}
+			continue;
+		}
+
+		if(conf[i] == '>' && in_tag){
+			current = add_token(current, LEX_ENDTAG, 1, i);
+			if(!current){
+				return free_tokens(head);
+			}
+			in_tag = 0;
+			continue;
+		}
+
+		if(conf[i] == '<' && (current->type == LEX_LF || current->type == LEX_START)){
+			current = add_token(current, LEX_OTAG, i, 1);
+			if(current){
+				return free_tokens(head);
+			}
+			in_tag = 1;
+			continue;
+		}
+
+		if(conf[i] == '/'  && current->type == LEX_OTAG){
+			current->type = LEX_CTAG;
+			current->length = 2;
 			continue;
 		}
 
