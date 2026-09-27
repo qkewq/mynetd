@@ -54,16 +54,72 @@ int parse_config_file(char *path, configs_t *ret){
 		return PARSE_LEX;
 	}
 
+	#ifdef LEX_DEBUG
+	printf("LEXER OUTPUT\n");
+	lex_token_t *current = tokens;
+	while(current){
+		printf("TOKEN\n\ttype: ");
+		switch(current->type){
+			case LEX_START:
+				printf("LEX_START");
+				break;
+			case LEX_EOF:
+				printf("LEX_EOF");
+				break;
+			case LEX_STRING:
+				printf("LEX_STRING");
+				break;
+			case LEX_ASSIGNMENT:
+				printf("LEX_ASSIGNMENT");
+				break;
+			case LEX_LF:
+				printf("LEX_LF");
+				break;
+			case LEX_TAGID:
+				printf("LEX_TAGID");
+				break;
+			case LEX_OTAG:
+				printf("LEX_OTAG");
+				break;
+			case LEX_CTAG:
+				printf("LEX_CTAG");
+				break;
+			case LEX_ENDTAG:
+				printf("LEX_ENDTAG");
+				break;
+		}
+		printf("\n");
+		printf("\tIndex: %d\n\tLength: %d\n", current->index, current->length);
+
+		printf("\tString: ");
+		fflush(stdout);
+		if(current->length){
+			write(STDOUT_FILENO, &conf[current->index], current->length);
+		}
+		printf("\n");
+
+		current = current->next;
+	}
+	return 0;
+	#endif
 }
 
 /*
 
+tcp protos throttle based on bytes out per stream per second|minute?
+udp protos limit based on dgrams in per source ip per second|minute?
+
 <mynetd>
-	addrs=blahblah
+	address=127.0.0.1
+	address=[::1]
+	address=192.168.1.1
+	rate_limit_level=[light|medium|strict]
+	log_level=[the normal ones]
 </mynetd>
 
 <echo>
 	port=7
+	address=127.0.0.1
 </echo>
 
 */

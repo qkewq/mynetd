@@ -113,7 +113,7 @@ lex_token_t *lex(char *conf, long conf_size){
 		}
 
 		if(conf[i] == '>' && in_tag){
-			current = add_token(current, LEX_ENDTAG, 1, i);
+			current = add_token(current, LEX_ENDTAG, i, 1);
 			if(!current){
 				return free_tokens(head);
 			}
@@ -123,7 +123,7 @@ lex_token_t *lex(char *conf, long conf_size){
 
 		if(conf[i] == '<' && (current->type == LEX_LF || current->type == LEX_START)){
 			current = add_token(current, LEX_OTAG, i, 1);
-			if(current){
+			if(!current){
 				return free_tokens(head);
 			}
 			in_tag = 1;
@@ -149,6 +149,12 @@ lex_token_t *lex(char *conf, long conf_size){
 			return free_tokens(head);
 		}
 		i += str_len - 1;
+
+		if(in_tag){
+			current->length--;
+			current->type = LEX_TAGID;
+			i--;
+		}
 	}
 
 	current = add_token_eof(current);
