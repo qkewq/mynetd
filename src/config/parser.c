@@ -6,6 +6,7 @@
 
 #include "parser.h"
 #include "lexer.h"
+#include "syntax.h"
 
 typedef enum parser_return_t{
 	PARSE_SUCCESS = 0,
@@ -15,7 +16,7 @@ typedef enum parser_return_t{
 	PARSE_MEMRY = -4,
 	PARSE_FREAD = -5,
 	PARSE_LEX = -6,
-
+	PARSE_SYNTAX = -7,
 } parser_return_t;
 
 int parse_config_file(char *path, configs_t **ret){
@@ -53,6 +54,7 @@ int parse_config_file(char *path, configs_t **ret){
 
 	lex_token_t *tokens = lex(conf, conf_size);
 	if(!tokens){
+		free(conf);
 		return PARSE_LEX;
 	}
 
@@ -108,6 +110,33 @@ int parse_config_file(char *path, configs_t **ret){
 	}
 	return 0;
 	#endif
+
+	if(!syntax_check(tokens, conf)){
+		free(conf);
+		free_tokens(tokens);
+		return PARSE_SYNTAX;
+	}
+
+	configs_t configs = calloc(1, sizeof(configs_t));
+	if(!configs){
+		free(conf);
+		free_tokens(tokens);
+		return PARSE_MEMRY;
+	}
+
+	port_map_t configs->services = calloc(1, sizeof(port_map_t));
+	if(!configs->services){
+		free(conf);
+		free_tokens(tokens);
+		free_configs(configs);
+		return PARSE_MEMRY;
+	}
+
+	configs->services = services;
+}
+
+void free_configs(configs_t *configs){
+
 }
 
 /*

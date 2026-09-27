@@ -2,15 +2,15 @@
 #define LEXER_H
 
 typedef enum lex_token_type_t{
-	LEX_START = 0,
-	LEX_EOF,
-	LEX_STRING,
-	LEX_ASSIGNMENT,
-	LEX_LF,
-	LEX_TAGID,
-	LEX_OTAG,
-	LEX_CTAG,
-	LEX_ENDTAG,
+	LEX_START = 0x01,
+	LEX_EOF = 0x02,
+	LEX_STRING = 0x04,
+	LEX_ASSIGNMENT = 0x08,	// '='
+	LEX_LF = 0x10,			// '\n'
+	LEX_TAGID = 0x20,
+	LEX_OTAG = 0x40,		// '<'
+	LEX_CTAG = 0x80,		// '</'
+	LEX_ENDTAG = 0x100,		// '>'
 } lex_token_type_t;
 
 typedef struct lex_token_t{
