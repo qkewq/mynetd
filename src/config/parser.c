@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <sys/socket.h>
 #include <errno.h>
 
 #include "parser.h"
@@ -16,7 +18,7 @@ typedef enum parser_return_t{
 
 } parser_return_t;
 
-int parse_config_file(char *path, configs_t *ret){
+int parse_config_file(char *path, configs_t **ret){
 	FILE *file = fopen(path, "rb");
 	if(!file){
 		return PARSE_FOPEN;
@@ -55,6 +57,7 @@ int parse_config_file(char *path, configs_t *ret){
 	}
 
 	#ifdef LEX_DEBUG
+	#include <unistd.h>
 	printf("LEXER OUTPUT\n");
 	lex_token_t *current = tokens;
 	while(current){
@@ -93,7 +96,10 @@ int parse_config_file(char *path, configs_t *ret){
 
 		printf("\tString: ");
 		fflush(stdout);
-		if(current->length){
+		if(current->type == LEX_LF){
+			printf("'\\n'");
+		}
+		else if(current->length){
 			write(STDOUT_FILENO, &conf[current->index], current->length);
 		}
 		printf("\n");
