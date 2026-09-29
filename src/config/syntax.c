@@ -57,12 +57,14 @@ int syntax_check(lex_token_t *token, char *conf){
 					wait_key = 0;
 					key_present = 1;
 					expects = LEX_ASSIGNMENT;
+					current->type = LEX_KEY;
 				}
-				if(key_present){
+				else if(key_present){
 					key_present = 0;
 					wait_key = 1;
 					expects = LEX_LF;
 					next_lf = (LEX_CTAG | LEX_STRING);
+					current->type = LEX_VALUE;
 				}
 				break;
 			case LEX_ASSIGNMENT:
@@ -73,12 +75,15 @@ int syntax_check(lex_token_t *token, char *conf){
 				next_lf = 0;
 				break;
 			case LEX_TAGID:
-				current_tagid = current;
+				// current_tagid = current;
 				expects = LEX_ENDTAG;
 				if(!current_tagid){
 					current_tagid = current;
 				}
 				else{
+					if(!tag_cmp(current_tagid, current, conf)){
+						return 0;
+					}
 					current_tagid = NULL;
 				}
 				break;
@@ -87,11 +92,7 @@ int syntax_check(lex_token_t *token, char *conf){
 				break;
 			case LEX_CTAG:
 				wait_key = 0;
-				if(!tag_cmp(current_tagid, current, conf)){
-					return 0;
-				}
-				expects = LEX_LF;
-				next_lf = LEX_OTAG;
+				expects = LEX_TAGID;
 				break;
 			case LEX_ENDTAG:
 				expects = LEX_LF;

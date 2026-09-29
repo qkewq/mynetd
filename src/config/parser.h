@@ -8,16 +8,17 @@
 // Should separate these into headers
 
 typedef enum services_t{
-	SERV_ECHO,
-	SERV_QOTD,
-	SERV_TIME,
-	SERV_DAYTIME,
-	SERV_CHARGEN,
-	SERV_DISCARD,
+	SERV_MYNETD = 0x01,
+	SERV_ECHO = 0x02,
+	SERV_QOTD = 0x04,
+	SERV_TIME = 0x08,
+	SERV_DAYTIME = 0x10,
+	SERV_CHARGEN = 0x20,
+	SERV_DISCARD = 0x40,
 } services_t;
 
 typedef enum log_levels_t{
-	LEVEL_INHERIT,
+	LEVEL_INHERIT = 0,
 	LEVEL_DEBUG,
 	LEVEL_INFO,
 	LEVEL_WARN,
@@ -26,7 +27,7 @@ typedef enum log_levels_t{
 } log_levels_t;
 
 typedef enum rate_limits_t{
-	LIMIT_INHERIT,
+	LIMIT_INHERIT = 0,
 	LIMIT_NONE,
 	LIMIT_LIGHT,
 	LIMIT_MEDIUM,
@@ -45,68 +46,27 @@ typedef struct addrlist_t{
 	struct sockaddr_storage addr;
 } addrlist_t;
 
-// Individual service configs
-
-typedef struct service_echo_t{
-	struct addrlist_t *addrs;
-	enum log_levels_t log_level;
-	enum rate_limits_t limit_level;
-	enum transport_rules_t transport;
-	uint16_t port;
-} service_echo_t;
-
-typedef struct service_qotd_t{
-	struct addrlist_t *addrs;
-	enum log_levels_t log_level;
-	enum rate_limits_t limit_level;
-	enum transport_rules_t transport;
-	char *filepath;
-	uint16_t port;
-} service_qotd_t;
-
-typedef struct service_time_t{
-	struct addrlist_t *addrs;
-	enum log_levels_t log_level;
-	enum rate_limits_t limit_level;
-	enum transport_rules_t transport;
-	uint16_t port;
-} service_time_t;
-
 typedef enum daytime_type_t{
-	ISO_8601,
+	DTIME_NONE = 0,
+	DTIME_ISO8601,
 } daytime_type_t;
 
-typedef struct service_daytime_t{
-	struct addrlist_t *addrs;
-	enum log_levels_t log_level;
-	enum rate_limits_t limit_level;
-	enum transport_rules_t transport;
-	enum daytime_type_t time_type;
-	uint16_t port;
-} service_daytime_t;
-
-typedef struct service_chargen_t{
+typedef struct service_config_t{
+	enum services_t service;
 	struct addrlist_t *addrs;
 	enum log_levels_t log_level;
 	enum rate_limits_t limit_level;
 	enum transport_rules_t transport;
 	char *filepath;
+	enum daytime_type_t time_type;
 	uint16_t port;
-} service_chargen_t;
-
-typedef struct service_discard_t{
-	struct addrlist_t *addrs;
-	enum log_levels_t log_level;
-	enum rate_limits_t limit_level;
-	enum transport_rules_t transport;
-	uint16_t port;
-} service_discard_t;
+} service_config_t;
 
 // Server level configs
 
 typedef struct port_map_t{
 	struct port_map_t *next;
-	void *service_config;
+	service_config_t *service_config;
 	enum services_t service;
 	uint16_t port;
 } port_map_t;
@@ -120,5 +80,6 @@ typedef struct configs_t{
 } configs_t;
 
 int parse_config_file(char *path, configs_t **ret);
+void free_configs(configs_t *configs);
 
 #endif

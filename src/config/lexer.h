@@ -11,6 +11,8 @@ typedef enum lex_token_type_t{
 	LEX_OTAG = 0x40,		// '<'
 	LEX_CTAG = 0x80,		// '</'
 	LEX_ENDTAG = 0x100,		// '>'
+	LEX_KEY = 0x200,
+	LEX_VALUE = 0x0400,
 } lex_token_type_t;
 
 typedef struct lex_token_t{

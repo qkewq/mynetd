@@ -1,12 +1,113 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <errno.h>
 
 #include "parser.h"
 #include "lexer.h"
 #include "syntax.h"
+
+#define ALL_SERVICES (SERV_MYNETD | SERV_ECHO | SERV_QOTD | SERV_TIME | SERV_DAYTIME | SERV_CHARGEN | SERV_DISCARD)
+
+typedef struct valid_configs_t{ // scuffed
+	enum services_t services;
+	char *key;
+	char **values;
+} valid_configs_t;
+
+valid_configs_t keys_values[] = {
+	{
+		.services = ALL_SERVICES,
+		.key = "log_level",
+		.values = {"debug", "info", "warn", "error", "fatal"}
+	},
+	{
+		.services = ALL_SERVICES,
+		.key = "rate_limiting",
+		.values = {"none", "light", "medium", "fatal"}
+	},
+	{
+		.services = ALL_SERVICES,
+		.key = "tcp",
+		.values = {"enabled", "disabled"}
+	},
+	{
+		.services = ALL_SERVICES,
+		.key = "udp",
+		.values = {"enabled", "disabled"}
+	},
+	{
+		.services = ALL_SERVICES,
+		.key = "address",
+		.values = NULL
+	}
+	{
+		.services = (ALL_SERVICES & !(SERV_MYNETD)),
+		.key = "port",
+		.values = NULL
+	},
+	{
+		.services = (SERV_DAYTIME),
+		.key = "format",
+		.values = {"iso8601"}
+	},
+	{
+		.services = (SERV_CHARGEN | SERV_QOTD),
+		.key = "filepath",
+		.values = NULL
+	},
+};
+
+typedef struct service_names_t{
+	char *name;
+	enum services_t service;
+} service_names_t;
+
+service_names_t tag_ids[] = {
+	{
+		.name = "mynetd",
+		.service = SERV_MYNETD
+	},
+	{
+		.name = "echo",
+		.service = SERV_ECHO
+	},
+	{
+		.name = "qotd",
+		.service = SERV_QOTD
+	},
+	{
+		.name = "time",
+		.service = SERV_TIME
+	},
+	{
+		.name = "daytime",
+		.service = SERV_DAYTIME
+	},
+	{
+		.name = "chargen",
+		.service = SERV_CHARGEN
+	},
+	{
+		.name = "discard",
+		.service = SERV_DISCARD
+	},
+};
+
+services_t validate_tagid(char *name, int length){
+	for(int i = 0; i < sizeof(tag_ids) / sizeof(service_names_t); i++){
+		if(strlen(tag_ids[i].name) != length){
+			continue;
+		}
+		if(strncmp(tag_ids[i].name, name, length) == 0){
+			return tag_ids[i].service;
+		}
+	}
+
+	return 0;
+}
 
 typedef enum parser_return_t{
 	PARSE_SUCCESS = 0,
@@ -17,7 +118,48 @@ typedef enum parser_return_t{
 	PARSE_FREAD = -5,
 	PARSE_LEX = -6,
 	PARSE_SYNTAX = -7,
+	PARSE_INVALID = -8,
 } parser_return_t;
+
+service_config_t *new_service(services_t type){
+	service_config_t new = calloc(1, sizeof(service_config_t));
+	if(!new){
+		return NULL;
+	}
+
+	new->service = type;
+	return new;
+}
+
+int read_tokens(configs_t *configs, char *conf, lex_token_t *tokens){
+	lex_token_t *current = tokens;
+	lex_token_t current_key = NULL;
+	services_t current_block = 0;
+
+	while(current->type != LEX_EOF){
+		switch(current->type){
+			case LEX_TAGID:
+				if(!current_block){
+					current_block = validate_tagid(&conf[current->index], current->length);
+					if(!current_block){
+						return PARSE_INVALID;
+					}
+					service_config_t *new = new_service(current_block);
+					if(!new){
+						return PARSE_MEMRY;
+					}
+					configs->services->next
+				}
+				break;
+			case LEX_KEY:
+				break;
+			case LEX_VALUE:
+				break;
+		}
+
+		current = current->next;
+	}
+}
 
 int parse_config_file(char *path, configs_t **ret){
 	FILE *file = fopen(path, "rb");
@@ -117,14 +259,14 @@ int parse_config_file(char *path, configs_t **ret){
 		return PARSE_SYNTAX;
 	}
 
-	configs_t configs = calloc(1, sizeof(configs_t));
+	configs_t *configs = calloc(1, sizeof(configs_t));
 	if(!configs){
 		free(conf);
 		free_tokens(tokens);
 		return PARSE_MEMRY;
 	}
 
-	port_map_t configs->services = calloc(1, sizeof(port_map_t));
+	configs->services = calloc(1, sizeof(port_map_t));
 	if(!configs->services){
 		free(conf);
 		free_tokens(tokens);
@@ -132,7 +274,33 @@ int parse_config_file(char *path, configs_t **ret){
 		return PARSE_MEMRY;
 	}
 
-	configs->services = services;
+	lex_token_t *current = tokens;
+	services_t current_block = 0;
+	lex_token_t *current_key = NULL;
+	while(current->type != LEX_EOF){
+		switch(current->type){
+			case LEX_TAGID:
+				if(!current_block){
+					current_block = validate_tagid(&conf[current->index], current->length);
+					if(!current_block){
+						return PARSE_INVALID;
+					}
+				}
+				else{
+					current_block = 0;
+				}
+				break;
+			case LEX_KEY:
+				break;
+			case LEX_VALUE:
+				break;
+			default:
+				break;
+		}
+
+
+		current = current->next;
+	}
 }
 
 void free_configs(configs_t *configs){
