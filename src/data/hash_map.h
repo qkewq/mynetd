@@ -4,7 +4,8 @@
 typedef struct hash_map_node_t{
 	struct hash_map_node_t *next;
 	char *key;
-	char *value;
+	size_t value_size;
+	void *value;
 } hash_map_node_t;
 
 typedef struct hash_map_t{
@@ -14,8 +15,8 @@ typedef struct hash_map_t{
 } hash_map_t;
 
 hash_map_t *hash_map_init(size_t num_buckets);
-int hash_map_insert(hash_map_t *map, char *key, char *value);
-char *hash_map_lookup(hash_map_t *map, char *key);
+int hash_map_insert(hash_map_t *map, char *key, void *value, size_t value_size);
+void *hash_map_lookup(hash_map_t *map, char *key, size_t *return_size);
 void hash_map_free(hash_map_t *map);
 
 #endif

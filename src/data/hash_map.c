@@ -6,7 +6,8 @@
 
 /*
 Simple hash map
-Only works with null terminated keys and values
+Only works with null terminated keys
+Type agnostic values (up to the caller)
 Minimal error checking
 */
 
@@ -22,6 +23,8 @@ uint32_t get_hash(char *key){ // good enough
 		hash *= key[i];
 		i++;
 	}
+
+	return hash;
 }
 
 hash_map_t *hash_map_init(size_t num_buckets){
@@ -40,9 +43,8 @@ hash_map_t *hash_map_init(size_t num_buckets){
 	return new_map;
 }
 
-int hash_map_insert(hash_map_t *map, char *key, char *value){
+int hash_map_insert(hash_map_t *map, char *key, void *value, size_t value_size){
 	int key_size = strlen(key);
-	int value_size = strlen(value);
 
 	hash_map_node_t *new_node = calloc(1, sizeof(hash_map_node_t));
 	if(!new_node){
@@ -50,7 +52,7 @@ int hash_map_insert(hash_map_t *map, char *key, char *value){
 	}
 
 	new_node->key = calloc(key_size + 1, sizeof(char));
-	new_node->value = calloc(value_size + 1, sizeof(char));
+	new_node->value = calloc(value_size, 1);
 
 	if(!new_node->key || !new_node->value){
 		free(new_node->key);
@@ -61,6 +63,7 @@ int hash_map_insert(hash_map_t *map, char *key, char *value){
 
 	memcpy(new_node->key, key, key_size);
 	memcpy(new_node->value, value, value_size);
+	new_node->value_size = value_size;
 
 	uint32_t index = get_hash(key) % map->num_buckets;
 	new_node->next = map->buckets[index];
@@ -69,22 +72,25 @@ int hash_map_insert(hash_map_t *map, char *key, char *value){
 	return 0;
 }
 
-char *hash_map_lookup(hash_map_t *map, char *key){
+void *hash_map_lookup(hash_map_t *map, char *key, size_t *return_size){
 	uint32_t index = get_hash(key) % map->num_buckets;
 
 	hash_map_node_t *current = map->buckets[index];
 	hash_map_node_t *next = NULL;
 	char *value = NULL;
+	size_t value_size = 0;
 
 	while(current){
 		next = current->next;
 		if(strcmp(key, current->key) == 0){
 			value = current->value;
+			value_size = current->value_size;
 			break;
 		}
 		current = next;
 	}
 
+	*return_size = value_size;
 	return value;
 }
 
