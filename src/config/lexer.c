@@ -3,6 +3,61 @@
 #include <string.h>
 
 #include "lexer.h"
+#include "data/hash_map.h"
+
+#define NUM_BUCKETS 32
+#define MAX_KEYWORD_SIZE 16
+
+typedef struct keyword_t{
+	char *word;
+	lex_token_t id;
+} keyword_t;
+
+keyword_t keywords[] = {
+	{.word = "log_level", .id = LEX_LOG_LEVEL},
+	{.word = "debug", .id = LEX_DEBUG},
+	{.word = "info", .id = LEX_INFO},
+	{.word = "warn", .id = LEX_WARN},
+	{.word = "error", .id = LEX_ERROR},
+	{.word = "fatal", .id = LEX_FATAL},
+	{.word = "rate_limiting", .id = LEX_RATE_LIMITING},
+	{.word = "none", .id = LEX_NONE},
+	{.word = "light", .id = LEX_LIGHT},
+	{.word = "medium", .id = LEX_MEDIUM},
+	{.word = "strict", .id = LEX_STRICT},
+	{.word = "tcp", .id = LEX_TCP},
+	{.word = "udp", .id = LEX_UDP},
+	{.word = "enabled", .id = LEX_ENABLED},
+	{.word = "disabled", .id = LEX_DISABLED},
+	{.word = "address", .id = LEX_ADDRESS},
+	{.word = "port", .id = LEX_PORT},
+	{.word = "format", .id = LEX_FORMAT},
+	{.word = "iso8601", .id = LEX_ISO8601},
+	{.word = "filepath", .id = LEX_FILEPATH},
+	{.word = "mynetd", .id = LEX_MYNETD},
+	{.word = "echo", .id = LEX_ECHO},
+	{.word = "qotd", .id = LEX_QOTD},
+	{.word = "time", .id = LEX_TIME},
+	{.word = "daytime", .id = LEX_DAYTIME},
+	{.word = "chargen", .id = LEX_CHARGEN},
+	{.word = "discard", .id = LEX_DISCARD},
+};
+
+hash_map_t *keyword_map(){
+	hash_map_t *map = hash_map_init(NUM_BUCKETS);
+	if(!map){
+		return NULL;
+	}
+
+	for(int i = 0; i < sizeof(keywords) / sizeof(keywords[0]); i++){
+		if(hash_map_insert(map, keywords[i].word, &keywords[i].id, sizeof(lex_token_type_t)) != 0){
+			hash_map_free(map);
+			return NULL;
+		}
+	}
+
+	return map;
+}
 
 lex_token_t *add_token(lex_token_t *current, lex_token_type_t type, size_t index, size_t length){
 	lex_token_t *new = calloc(1, sizeof(lex_token_t));
@@ -82,6 +137,19 @@ int get_strlen(char *conf, long conf_size, int current){
 	return len;
 }
 
+lex_token_type_t keyword_lookup(hash_map_t *map, char *conf, size_t index, size_t length){
+	char word[MAX_KEYWORD_SIZE] = {0};
+	memcpy(word, &conf[index], length);
+	size_t value_size = 0;
+	lex_token_type_t *id = hash_map_lookup(map, word, &value_size);
+
+	if(!id || value_size != sizeof(lex_token_type_t)){
+		return LEX_STRING;
+	}
+
+	return *id;
+}
+
 lex_token_t *lex(char *conf, long conf_size){
 	lex_token_t *head = calloc(1, sizeof(lex_token_t));
 	if(!head){
@@ -89,6 +157,12 @@ lex_token_t *lex(char *conf, long conf_size){
 	}
 	lex_token_t *current = head;
 	current->type = LEX_START;
+
+	hash_map_t *keyword_id = keyword_map();
+	if(!keyword_id){
+		free_tokens(head);
+		return NULL;
+	}
 
 	int in_tag = 0;
 	for(int i = 0; i < conf_size; i++){
@@ -144,15 +218,25 @@ lex_token_t *lex(char *conf, long conf_size){
 		}
 
 		int str_len = get_strlen(conf, conf_size, i);
-		current = add_token(current, LEX_STRING, i, str_len);
+		lex_token_type_t type;
+		if(in_tag){
+			type = keyword_lookup(keyword_id, conf, i, str_len - 1);
+		}
+		else{
+			type = keyword_lookup(keyword_id, conf, i, str_len);
+		}
+		if(type == LEX_STRING){
+			current = add_token(current, LEX_STRING, i, str_len);
+		}
+		else{
+			current = add_token(current, type, i, 0);
+		}
 		if(!current){
 			return free_tokens(head);
 		}
 		i += str_len - 1;
 
 		if(in_tag){
-			current->length--;
-			current->type = LEX_TAGID;
 			i--;
 		}
 	}
@@ -162,6 +246,7 @@ lex_token_t *lex(char *conf, long conf_size){
 		return free_tokens(head);
 	}
 
+	hash_map_free(keyword_id);
 	return head;
 }
 

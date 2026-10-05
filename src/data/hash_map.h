@@ -10,7 +10,6 @@ typedef struct hash_map_node_t{
 
 typedef struct hash_map_t{
 	size_t num_buckets;
-	size_t used;
 	hash_map_node_t **buckets;
 } hash_map_t;
 
