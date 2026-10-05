@@ -52,6 +52,7 @@ typedef enum daytime_type_t{
 } daytime_type_t;
 
 typedef struct service_config_t{
+	struct service_config_t *next;
 	enum services_t service;
 	struct addrlist_t *addrs;
 	enum log_levels_t log_level;
@@ -64,15 +65,8 @@ typedef struct service_config_t{
 
 // Server level configs
 
-typedef struct port_map_t{
-	struct port_map_t *next;
-	service_config_t *service_config;
-	enum services_t service;
-	uint16_t port;
-} port_map_t;
-
 typedef struct configs_t{
-	struct port_map_t *services;
+	struct service_config_t *services;
 	struct addrlist_t *addrs;
 	enum log_levels_t log_level;
 	enum rate_limits_t limit_level;

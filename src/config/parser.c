@@ -26,7 +26,7 @@ valid_configs_t keys_values[] = {
 	{
 		.services = ALL_SERVICES,
 		.key = "rate_limiting",
-		.values = {"none", "light", "medium", "fatal"}
+		.values = {"none", "light", "medium", "strict"}
 	},
 	{
 		.services = ALL_SERVICES,
@@ -109,6 +109,30 @@ services_t validate_tagid(char *name, int length){
 	return 0;
 }
 
+int set_value(char *conf, lex_token_t *key, lex_token_t* value, services_t service, service_config_t new){
+	int key_index = -1;
+	for(int i = 0; i < sizeof(keys_values) / sizeof(valid_configs_t); i++){
+		if(strlen(keys_values->key) != key->length){
+			continue;
+		}
+		if(strncmp(conf[key->index], keys_values->key, key->length) == 0){
+			key_index = i;
+			break;
+		}
+	}
+
+	if(key_index == -1){
+		return 0;
+	}
+	if(!(keys_values->services & service)){
+		return 0;
+	}
+
+	for(int i = 0; i < sizeof(keys_values[key_index].values) / sizeof(char *); i++){
+
+	}
+}
+
 typedef enum parser_return_t{
 	PARSE_SUCCESS = 0,
 	PARSE_FOPEN = -1,
@@ -122,7 +146,7 @@ typedef enum parser_return_t{
 } parser_return_t;
 
 service_config_t *new_service(services_t type){
-	service_config_t new = calloc(1, sizeof(service_config_t));
+	service_config_t *new = calloc(1, sizeof(service_config_t));
 	if(!new){
 		return NULL;
 	}
@@ -135,6 +159,7 @@ int read_tokens(configs_t *configs, char *conf, lex_token_t *tokens){
 	lex_token_t *current = tokens;
 	lex_token_t current_key = NULL;
 	services_t current_block = 0;
+	service_config_t *new = NULL;
 
 	while(current->type != LEX_EOF){
 		switch(current->type){
@@ -144,16 +169,19 @@ int read_tokens(configs_t *configs, char *conf, lex_token_t *tokens){
 					if(!current_block){
 						return PARSE_INVALID;
 					}
-					service_config_t *new = new_service(current_block);
+					new = new_service(current_block);
 					if(!new){
 						return PARSE_MEMRY;
 					}
-					configs->services->next
+					new->next = configs->services;
+					configs->services = new;
 				}
 				break;
 			case LEX_KEY:
+				current_key = current;
 				break;
 			case LEX_VALUE:
+				set_value(conf, current_key, current, current_block, new);
 				break;
 		}
 
@@ -205,39 +233,8 @@ int parse_config_file(char *path, configs_t **ret){
 	printf("LEXER OUTPUT\n");
 	lex_token_t *current = tokens;
 	while(current){
-		printf("TOKEN\n\ttype: ");
-		switch(current->type){
-			case LEX_START:
-				printf("LEX_START");
-				break;
-			case LEX_EOF:
-				printf("LEX_EOF");
-				break;
-			case LEX_STRING:
-				printf("LEX_STRING");
-				break;
-			case LEX_ASSIGNMENT:
-				printf("LEX_ASSIGNMENT");
-				break;
-			case LEX_LF:
-				printf("LEX_LF");
-				break;
-			case LEX_TAGID:
-				printf("LEX_TAGID");
-				break;
-			case LEX_OTAG:
-				printf("LEX_OTAG");
-				break;
-			case LEX_CTAG:
-				printf("LEX_CTAG");
-				break;
-			case LEX_ENDTAG:
-				printf("LEX_ENDTAG");
-				break;
-		}
-		printf("\n");
+		printf("TOKEN\n\ttype: %d\n", current->type);
 		printf("\tIndex: %d\n\tLength: %d\n", current->index, current->length);
-
 		printf("\tString: ");
 		fflush(stdout);
 		if(current->type == LEX_LF){
