@@ -2,8 +2,8 @@
 #include <string.h>
 
 
-#include "syntax.h"
-#include "lexer.h"
+#include "config/syntax.h"
+#include "config/lexer.h"
 
 int tag_cmp(lex_token_t *otag, lex_token_t *ctag, char *conf){
 	if(otag->length != ctag->length){

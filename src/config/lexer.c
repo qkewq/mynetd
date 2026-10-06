@@ -10,7 +10,7 @@
 
 typedef struct keyword_t{
 	char *word;
-	lex_token_t id;
+	enum lex_token_type_t id;
 } keyword_t;
 
 keyword_t keywords[] = {

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "hash_map.h"
+#include "data/hash_map.h"
 
 /*
 Simple hash map

@@ -5,96 +5,11 @@
 #include <sys/socket.h>
 #include <errno.h>
 
-#include "parser.h"
-#include "lexer.h"
-#include "syntax.h"
+#include "config/parser.h"
+#include "config/lexer.h"
+#include "config/syntax.h"
 
 #define ALL_SERVICES (SERV_MYNETD | SERV_ECHO | SERV_QOTD | SERV_TIME | SERV_DAYTIME | SERV_CHARGEN | SERV_DISCARD)
-
-typedef struct valid_configs_t{ // scuffed
-	enum services_t services;
-	char *key;
-	char **values;
-} valid_configs_t;
-
-valid_configs_t keys_values[] = {
-	{
-		.services = ALL_SERVICES,
-		.key = "log_level",
-		.values = {"debug", "info", "warn", "error", "fatal"}
-	},
-	{
-		.services = ALL_SERVICES,
-		.key = "rate_limiting",
-		.values = {"none", "light", "medium", "strict"}
-	},
-	{
-		.services = ALL_SERVICES,
-		.key = "tcp",
-		.values = {"enabled", "disabled"}
-	},
-	{
-		.services = ALL_SERVICES,
-		.key = "udp",
-		.values = {"enabled", "disabled"}
-	},
-	{
-		.services = ALL_SERVICES,
-		.key = "address",
-		.values = NULL
-	}
-	{
-		.services = (ALL_SERVICES & !(SERV_MYNETD)),
-		.key = "port",
-		.values = NULL
-	},
-	{
-		.services = (SERV_DAYTIME),
-		.key = "format",
-		.values = {"iso8601"}
-	},
-	{
-		.services = (SERV_CHARGEN | SERV_QOTD),
-		.key = "filepath",
-		.values = NULL
-	},
-};
-
-typedef struct service_names_t{
-	char *name;
-	enum services_t service;
-} service_names_t;
-
-service_names_t tag_ids[] = {
-	{
-		.name = "mynetd",
-		.service = SERV_MYNETD
-	},
-	{
-		.name = "echo",
-		.service = SERV_ECHO
-	},
-	{
-		.name = "qotd",
-		.service = SERV_QOTD
-	},
-	{
-		.name = "time",
-		.service = SERV_TIME
-	},
-	{
-		.name = "daytime",
-		.service = SERV_DAYTIME
-	},
-	{
-		.name = "chargen",
-		.service = SERV_CHARGEN
-	},
-	{
-		.name = "discard",
-		.service = SERV_DISCARD
-	},
-};
 
 services_t validate_tagid(char *name, int length){
 	for(int i = 0; i < sizeof(tag_ids) / sizeof(service_names_t); i++){
@@ -228,7 +143,7 @@ int parse_config_file(char *path, configs_t **ret){
 		return PARSE_LEX;
 	}
 
-	#ifdef LEX_DEBUG
+	#ifdef DEBUG_LEXER
 	#include <unistd.h>
 	printf("LEXER OUTPUT\n");
 	lex_token_t *current = tokens;
@@ -256,48 +171,6 @@ int parse_config_file(char *path, configs_t **ret){
 		return PARSE_SYNTAX;
 	}
 
-	configs_t *configs = calloc(1, sizeof(configs_t));
-	if(!configs){
-		free(conf);
-		free_tokens(tokens);
-		return PARSE_MEMRY;
-	}
-
-	configs->services = calloc(1, sizeof(port_map_t));
-	if(!configs->services){
-		free(conf);
-		free_tokens(tokens);
-		free_configs(configs);
-		return PARSE_MEMRY;
-	}
-
-	lex_token_t *current = tokens;
-	services_t current_block = 0;
-	lex_token_t *current_key = NULL;
-	while(current->type != LEX_EOF){
-		switch(current->type){
-			case LEX_TAGID:
-				if(!current_block){
-					current_block = validate_tagid(&conf[current->index], current->length);
-					if(!current_block){
-						return PARSE_INVALID;
-					}
-				}
-				else{
-					current_block = 0;
-				}
-				break;
-			case LEX_KEY:
-				break;
-			case LEX_VALUE:
-				break;
-			default:
-				break;
-		}
-
-
-		current = current->next;
-	}
 }
 
 void free_configs(configs_t *configs){
